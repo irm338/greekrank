@@ -1,3 +1,7 @@
+// Conserva el identificador para que una notificación nueva reemplace su temporizador.
+let notificationTimeout;
+
+// Muestra el mensaje como texto para evitar interpretar contenido como HTML.
 function showNotification(msg, type = 'info') {
     const banner = document.getElementById('notification-banner');
     const content = document.getElementById('notification-content');
@@ -6,13 +10,16 @@ function showNotification(msg, type = 'info') {
     messageEl.textContent = msg;
     banner.classList.remove('hidden');
     content.classList.toggle('is-error', type === 'error');
-    setTimeout(closeNotification, 4000);
+    clearTimeout(notificationTimeout);
+    notificationTimeout = setTimeout(closeNotification, 4000);
 }
 
 function closeNotification() {
+    clearTimeout(notificationTimeout);
     document.getElementById('notification-banner').classList.add('hidden');
 }
 
+// Abre y cierra el diálogo de autenticación y bloquea el desplazamiento del fondo.
 function openAuthModal() {
     document.getElementById('auth-modal').classList.remove('hidden');
     document.body.classList.add('modal-open');
@@ -33,6 +40,8 @@ function switchAuthTab(tab) {
     const regForm = document.getElementById('form-register');
     const tabLogin = document.getElementById('auth-tab-login');
     const tabReg = document.getElementById('auth-tab-register');
+
+    if (!['login', 'register'].includes(tab)) return;
 
     if (tab === 'login') {
         loginForm.classList.remove('hidden');
@@ -69,7 +78,14 @@ function selectRegistrationType(type) {
         : 'Crea una cuenta para participar en la comunidad.';
 }
 
+// Mantiene sincronizadas la vista visible y la opción activa de navegación.
 function navigateTo(viewId) {
+    const adminNavigation = document.getElementById('nav-admin');
+    if (viewId === 'admin' && (!adminNavigation || adminNavigation.classList.contains('hidden'))) {
+        showNotification('Solo un administrador puede acceder a esta sección.', 'error');
+        return;
+    }
+
     document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
     const target = document.getElementById(`view-${viewId}`);
     if (target) target.classList.remove('hidden');
@@ -78,3 +94,10 @@ function navigateTo(viewId) {
     const activeLink = document.querySelector(`.nav-link[onclick="navigateTo('${viewId}')"]`);
     if (activeLink) activeLink.classList.add('is-active');
 }
+
+// Permite cerrar el diálogo con Escape, además del botón y el fondo del modal.
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !document.getElementById('auth-modal').classList.contains('hidden')) {
+        closeAuthModal();
+    }
+});

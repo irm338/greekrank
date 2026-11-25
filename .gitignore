@@ -1,0 +1,6 @@
+# Archivos temporales generados por el sistema operativo.
+.DS_Store
+Thumbs.db
+
+# Preferencias locales del editor.
+.vscode/

@@ -4,11 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#0b0c10">
+    <!-- La URL puede configurarse aquí; api.js usa localhost:3000/api/v1 como alternativa. -->
     <meta name="api-base" content="">
     <title>GeekRank - Reseñas y rankings</title>
+    <!-- Recursos locales del frontend; mantener estas rutas relativas al index.html. -->
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+    <!-- Cabecera, identidad de sesión y navegación entre las vistas principales. -->
     <header class="site-header">
         <div class="header-inner">
             <button class="brand" type="button" onclick="navigateTo('home')" aria-label="GeekRank, ir al inicio">
@@ -48,6 +51,7 @@
         </div>
     </header>
 
+    <!-- Región accesible para mensajes temporales de éxito y error. -->
     <div id="notification-banner" class="notification-wrap hidden" role="status" aria-live="polite">
         <div id="notification-content" class="notification">
             <span id="notification-message">Notificación</span>
@@ -55,6 +59,7 @@
         </div>
     </div>
 
+    <!-- Vistas de catálogo, ranking, categorías, reparto, detalle y gestión. -->
     <main class="page-main">
         <section id="view-home" class="view-section page-stack">
             <div class="hero-panel">
@@ -215,6 +220,7 @@
         </section>
     </main>
 
+    <!-- Modal de acceso y registro; su contenido se alterna con los controles de pestaña. -->
     <div id="auth-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="auth-title" onclick="if(event.target === this) closeAuthModal()">
         <div class="modal-panel">
             <button class="modal-close" type="button" onclick="closeAuthModal()" aria-label="Cerrar">&times;</button>
@@ -263,6 +269,7 @@
         </div>
     </div>
 
+    <!-- Cargar primero la capa de API y utilidades de interfaz; app.js depende de ambas. -->
     <script src="js/api.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/app.js"></script>

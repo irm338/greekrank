@@ -1,3 +1,4 @@
+// Estado en memoria que alimenta las vistas; la sesión persistente vive en el JWT local.
 const appState = {
     movies: [],
     categories: [],
@@ -10,6 +11,7 @@ const appState = {
 
 document.addEventListener('DOMContentLoaded', initializeApp);
 
+// Comprueba la sesión y carga las colecciones públicas que necesita la interfaz.
 async function initializeApp() {
     const token = localStorage.getItem('jwt_token');
     if (token) {
@@ -28,6 +30,7 @@ async function initializeApp() {
     await loadInitialData();
 }
 
+// Escapa valores antes de interpolarlos en plantillas HTML.
 function escapeHTML(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({
         '&': '&amp;',
@@ -38,6 +41,7 @@ function escapeHTML(value) {
     })[character]);
 }
 
+// Acepta únicamente URL HTTP(S) en imágenes y enlaces de tráiler.
 function imageUrl(value) {
     if (!value) return '';
     try {
@@ -48,6 +52,7 @@ function imageUrl(value) {
     }
 }
 
+// Construye imágenes con atributos escapados y un respaldo opcional.
 function imageMarkup(url, alt, className, fallbackUrl = '') {
     const safeUrl = imageUrl(url);
     const safeFallbackUrl = imageUrl(fallbackUrl);
@@ -58,6 +63,7 @@ function imageMarkup(url, alt, className, fallbackUrl = '') {
     return `<img${source ? ` src="${escapeHTML(source)}"` : ''}${fallbackAttribute} alt="${escapeHTML(alt)}" class="${className}" loading="lazy">`;
 }
 
+// Sustituye una imagen rota por su respaldo o por un avatar accesible.
 document.addEventListener('error', event => {
     const image = event.target;
     if (!(image instanceof HTMLImageElement)) return;
@@ -122,6 +128,7 @@ async function loadInitialData() {
     }
 }
 
+// Aplica los filtros de búsqueda y categoría sobre el catálogo ya cargado.
 function filterMovies() {
     const query = document.getElementById('search-input').value.trim().toLocaleLowerCase();
     const categoryId = document.getElementById('category-filter').value;
@@ -139,6 +146,7 @@ function filterMovies() {
     });
 }
 
+// Genera tarjetas del catálogo; los datos externos se escapan antes de insertarse.
 function renderMediaGrid(movies, gridId = 'media-grid', showPosition = false) {
     const grid = document.getElementById(gridId);
     if (!movies.length) {
@@ -193,6 +201,7 @@ function renderRankingView() {
     renderMediaGrid(rankedMovies, 'ranking-grid', true);
 }
 
+// Consulta el detalle actualizado y lo muestra en su vista.
 async function showDetail(id) {
     try {
         const response = await apiRequest(`/peliculas/${Number(id)}`);
@@ -205,6 +214,7 @@ async function showDetail(id) {
     }
 }
 
+// Pinta el detalle y las acciones disponibles para la sesión actual.
 function renderMovieDetail(movie) {
     const id = Number(movie.idpelicula);
     const isSignedIn = Boolean(appState.currentUser);
@@ -276,6 +286,7 @@ function renderReviewForm(movieId) {
     `;
 }
 
+// El control de voto propio se omite visualmente y también se valida al votar.
 function renderReviews(reviews) {
     if (!reviews.length) return '<p class="empty-state">Todavía no hay reseñas para esta obra.</p>';
 
@@ -331,6 +342,25 @@ async function handleReviewSubmit(event, movieId) {
 }
 
 async function voteReview(reviewId, vote) {
+    if (!appState.currentUser) {
+        openLoginModal();
+        return;
+    }
+
+    const review = appState.activeMovie?.resenas?.find(item => Number(item.id) === Number(reviewId));
+    if (!review) {
+        showNotification('No se encontró la reseña que quieres votar.', 'error');
+        return;
+    }
+    if (Number(appState.currentUser.id) === Number(review.idusuario)) {
+        showNotification('No puedes votar tu propia reseña.', 'error');
+        return;
+    }
+    if (!['like', 'dislike'].includes(vote)) {
+        showNotification('Selecciona un voto válido.', 'error');
+        return;
+    }
+
     try {
         await apiRequest(`/resenas/${Number(reviewId)}/votos`, 'POST', { voto: vote });
         showNotification('Tu voto se registró correctamente.');
@@ -347,6 +377,10 @@ async function voteReview(reviewId, vote) {
 async function updateMovie(id) {
     const movie = appState.activeMovie;
     if (!movie || Number(movie.idpelicula) !== Number(id)) return;
+    if (appState.currentUser?.role !== 'administrador' && movie.puede_gestionar !== true) {
+        showNotification('No tienes permiso para actualizar esta obra.', 'error');
+        return;
+    }
 
     const title = prompt('Nuevo título:', movie.titulo);
     if (!title?.trim()) return;
@@ -363,7 +397,7 @@ async function updateMovie(id) {
             trailer_url: movie.trailer_url || null,
             tipo: movie.tipo || 'pelicula'
         });
-        showNotification(response.mensaje || 'La película se actualizó correctamente.');
+        showNotification(response?.mensaje || 'La película se actualizó correctamente.');
         await loadInitialData();
         await showDetail(id);
     } catch (error) {
@@ -372,10 +406,16 @@ async function updateMovie(id) {
 }
 
 async function deleteMovie(id) {
+    const movie = appState.activeMovie;
+    if (!movie || Number(movie.idpelicula) !== Number(id)) return;
+    if (appState.currentUser?.role !== 'administrador' && movie.puede_gestionar !== true) {
+        showNotification('No tienes permiso para eliminar esta obra.', 'error');
+        return;
+    }
     if (!confirm('¿Estás seguro de eliminar esta película?')) return;
     try {
         const response = await apiRequest(`/peliculas/${Number(id)}`, 'DELETE');
-        showNotification(response.mensaje || 'Película eliminada.');
+        showNotification(response?.mensaje || 'Película eliminada.');
         appState.activeMovie = null;
         await loadInitialData();
         navigateTo('home');
@@ -566,7 +606,7 @@ async function updateCatalog(type, id) {
 
     try {
         const response = await apiRequest(`${config.endpoint}/${Number(id)}`, 'PUT', payload);
-        showNotification(response.mensaje || `Se actualizó el/la ${config.label}.`);
+        showNotification(response?.mensaje || `Se actualizó el/la ${config.label}.`);
         await loadInitialData();
         if (type !== 'category') openCastGroup(type === 'director' ? 'directors' : 'actors');
     } catch (error) {
@@ -589,7 +629,7 @@ async function deleteCatalog(type, id) {
 
     try {
         const response = await apiRequest(`${config.endpoint}/${Number(id)}`, 'DELETE');
-        showNotification(response.mensaje || `Se eliminó el/la ${config.label}.`);
+        showNotification(response?.mensaje || `Se eliminó el/la ${config.label}.`);
         await loadInitialData();
         if (type !== 'category') openCastGroup(type === 'director' ? 'directors' : 'actors');
     } catch (error) {
@@ -695,7 +735,7 @@ async function resolveAdminRequest(userId, estado) {
             'PATCH',
             { estado }
         );
-        showNotification(response.mensaje || `Solicitud ${estado}.`);
+        showNotification(response?.mensaje || `Solicitud ${estado}.`);
         await loadAdminRequests();
     } catch (error) {
         showNotification(error.message, 'error');
@@ -703,9 +743,14 @@ async function resolveAdminRequest(userId, estado) {
 }
 
 async function setMovieApproval(id, state) {
+    if (appState.currentUser?.role !== 'administrador') {
+        showNotification('Solo un administrador puede resolver propuestas.', 'error');
+        return;
+    }
+
     try {
         const response = await apiRequest(`/peliculas/${Number(id)}/aprobacion`, 'PATCH', { estado: state });
-        showNotification(response.mensaje || `Propuesta ${state}.`);
+        showNotification(response?.mensaje || `Propuesta ${state}.`);
         await loadInitialData();
     } catch (error) {
         showNotification(error.message, 'error');
@@ -802,7 +847,7 @@ async function handleRegister(event) {
         switchAuthTab('login');
         document.getElementById('form-register').reset();
         selectRegistrationType('usuario');
-        showNotification(response.mensaje || 'Registro exitoso. Inicia sesión.');
+        showNotification(response?.mensaje || 'Registro exitoso. Inicia sesión.');
     } catch (error) {
         showNotification(error.message, 'error');
     }
@@ -810,6 +855,11 @@ async function handleRegister(event) {
 
 async function handleAddMedia(event) {
     event.preventDefault();
+    if (!appState.currentUser) {
+        openLoginModal();
+        return;
+    }
+
     const payload = {
         titulo: document.getElementById('media-title').value.trim(),
         sinopsis: document.getElementById('media-description').value.trim(),
@@ -823,7 +873,7 @@ async function handleAddMedia(event) {
     try {
         const response = await apiRequest('/peliculas', 'POST', payload);
         document.getElementById('add-media-form').reset();
-        showNotification(response.mensaje || 'Propuesta enviada correctamente.');
+        showNotification(response?.mensaje || 'Propuesta enviada correctamente.');
         await loadInitialData();
         navigateTo('home');
     } catch (error) {
@@ -912,7 +962,7 @@ async function handleAddCatalog(event) {
     try {
         const response = await apiRequest(catalogConfig.endpoint, 'POST', payload);
         document.getElementById('add-catalog-form').reset();
-        showNotification(response.mensaje || `Se creó el registro de ${catalogConfig.label}.`);
+        showNotification(response?.mensaje || `Se creó el registro de ${catalogConfig.label}.`);
         await loadInitialData();
     } catch (error) {
         showNotification(error.message, 'error');

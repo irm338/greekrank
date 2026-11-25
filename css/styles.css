@@ -1,3 +1,4 @@
+/* Variables de tema y tipografía base compartidas por toda la interfaz. */
 :root {
     color-scheme: dark;
     --color-bg: #0b0c10;
@@ -15,6 +16,7 @@
     text-rendering: optimizeLegibility;
 }
 
+/* Normalización, foco visible y utilidades de accesibilidad. */
 * {
     box-sizing: border-box;
 }
@@ -83,6 +85,7 @@ textarea:focus-visible {
     border: 0;
 }
 
+/* Cabecera fija, navegación y acciones de sesión. */
 .site-header {
     position: sticky;
     z-index: 20;
@@ -233,6 +236,7 @@ textarea:focus-visible {
     white-space: nowrap;
 }
 
+/* Botones, panel principal, búsqueda y tarjetas del catálogo. */
 .button {
     display: inline-flex;
     min-height: 44px;
@@ -515,6 +519,7 @@ textarea:focus-visible {
     font-weight: 800;
 }
 
+/* Formularios y tarjetas para categorías y reparto. */
 .form-panel > label {
     display: block;
     margin-top: 20px;
@@ -826,6 +831,7 @@ textarea:focus-visible {
     color: #fff;
 }
 
+/* Vista de detalle, reseñas y controles de gestión. */
 .detail-card,
 .form-panel {
     padding: clamp(20px, 4vw, 38px);
@@ -1096,6 +1102,7 @@ textarea:focus-visible {
     gap: 7px;
 }
 
+/* Formularios, selección de tipo de cuenta y panel de notificaciones. */
 .form-page {
     max-width: 680px;
     margin: 0 auto;
@@ -1228,6 +1235,7 @@ textarea:focus-visible {
     cursor: pointer;
 }
 
+/* Superposición y contenido del modal de autenticación. */
 .modal-backdrop {
     position: fixed;
     z-index: 50;
@@ -1303,6 +1311,7 @@ body.modal-open {
     background: var(--color-gold);
 }
 
+/* Ajustes de distribución para tabletas, móviles y pantallas compactas. */
 @media (max-width: 1050px) {
     .header-inner {
         display: flex;
@@ -1712,6 +1721,7 @@ body.modal-open {
     }
 }
 
+/* Respetar la preferencia del sistema para reducir animaciones. */
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
